@@ -8,8 +8,10 @@ class Btn {
   static const String subtract = "-";
   static const String calculate = "=";
   static const String dot = ".";
-  static const String plusOrminus = "+/-";
-
+  static const String squareroot = "√";
+  static const String openbracket = "(";
+  static const String closebracket = ")";
+  static const String plusOrminus = '+/-';
   static const String n0 = "0";
   static const String n1 = "1";
   static const String n2 = "2";
@@ -21,10 +23,15 @@ class Btn {
   static const String n8 = "8";
   static const String n9 = "9";
 
+
   static const List<String> buttonValues = [
     clr,
     del,
+    squareroot,
     per,
+    openbracket,
+    closebracket,
+    plusOrminus,
     multiply,
     n7,
     n8,
@@ -38,9 +45,8 @@ class Btn {
     n2,
     n3,
     add,
-    plusOrminus,
-    n0,
     dot,
+    n0,
     calculate,
   ];
 }

@@ -1,6 +1,9 @@
+//Im/2021/028
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/button_values.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:math_expressions/math_expressions.dart';
+import 'dart:math';
 
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({super.key});
@@ -9,11 +12,12 @@ class CalculatorScreen extends StatefulWidget {
   State<CalculatorScreen> createState() => _CalculatorScreenState();
 }
 
-// State class for the Calculator Screen
 class _CalculatorScreenState extends State<CalculatorScreen> {
-  String number1 = ""; // . 0-9
-  String number2 = ""; // . 0-9
-  String operand = ""; // + - * /
+  String equation = ""; // The input string
+  String output = "0"; // The calculated result
+  List<String> history = []; // History list
+  bool lastActionWasCalculation = false; // Track if the last action was a calculation
+
 
   @override
   Widget build(BuildContext context) {
@@ -21,110 +25,145 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: Column(children: [
-          //ouput
-          Expanded(
-            child: SingleChildScrollView(
-              reverse: true,
+        child: Column(
+          children: [
+            // History display (take up half the screen)
+            Expanded(
+              flex: 1,
               child: Container(
-                alignment: Alignment.bottomRight,
-                padding: const EdgeInsets.all(16),
-                child:  Text(
-                  "$number1$operand$number2".isEmpty
-                    ? "0"
-                    : "$number1$operand$number2",
-                  style: const TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.end,
+                color: Colors.black12,
+                child: Column(
+                  children: [
+                    // Toolbar with icons for history
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Clear History Icon
+                          IconButton(
+                            icon: Icon(Icons.delete_forever),
+                            onPressed: () {
+                              setState(() {
+                                history.clear(); // Clear history
+                              });
+                            },
+                            tooltip: 'Clear History',
+                            color: Colors.redAccent,
+                            iconSize: 30.0,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        reverse: true,
+                        itemCount: history.length,
+                        itemBuilder: (context, index) {
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                equation = history[index].split(' = ')[0];
+                              });
+                              calculate(finalize: false); // Recalculate
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 4.0, horizontal: 8.0),
+                              child: Text(
+                                history[index],
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  color: Colors.grey,
+                                ),
+                                textAlign: TextAlign.end,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
 
-          // divider Line
-          Container(
-            width: double.infinity,
-            height: 0.5, // Line thickness
-            color: Colors.white54, // Line color (subtle white)
-            margin: const EdgeInsets.fromLTRB(20, 0, 20, 10), // Side margins
-          ),
+            // Result display (take up the remaining half)
+            Expanded(
+              flex: 1,
+              child: SingleChildScrollView(
+                reverse: true,
+                child: Container(
+                  alignment: Alignment.bottomRight,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Equation line
+                      Text(
+                        equation.isEmpty ? "0" : equation,
+                        style: const TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.end,
+                      ),
 
-          //buttons
-          Wrap(
-            children: Btn.buttonValues
-                .map(
-                  (value) => SizedBox(
-                      width: (screenSize.width / 4),
-                      height: screenSize.width / 5,
-                      child: buildButton(value)),
-                )
-                .toList(),
-          )
-        ]),
+                      // Result line
+                      Text(
+                        "= $output",
+                        style: const TextStyle(
+                          fontSize: 32,
+                          color: Colors.grey,
+                        ),
+                        textAlign: TextAlign.end,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Divider line
+            Container(
+              width: double.infinity,
+              height: 0.5,
+              color: Colors.white54,
+              margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            ),
+
+            // Buttons
+            Wrap(
+              children: Btn.buttonValues
+                  .map(
+                    (value) => SizedBox(
+                      width: value == Btn.calculate
+                          ? screenSize.width / 2 // Make the equals button span two spaces
+                          : screenSize.width / 4, // Default width for other buttons
+                      height: screenSize.width / 6,
+                      child: buildButton(value),
+                    ),
+                  )
+                  .toList(),
+            )
+          ],
+        ),
       ),
     );
   }
 
-//build button method
-  Widget buildButton(value) {
-  final textColor = [
-    Btn.clr, 
-    Btn.del,
-    Btn.per,
-    Btn.multiply,
-    Btn.add,
-    Btn.subtract,
-    Btn.divide,
-    Btn.calculate,
-  ].contains(value)
-      ? Colors.black
-      : Colors.white;
+  void onBtnTap(String value) {
+    // Reset the equation if the last action was a calculation
+    if (lastActionWasCalculation && RegExp(r'\d').hasMatch(value)) {
+      setState(() {
+        equation = value; // Start a new equation with the pressed number
+        lastActionWasCalculation = false; // Reset the flag
+      });
+      calculate(finalize: false);
+      return;
+    }
 
-  return Padding(
-    padding: const EdgeInsets.all(8.0),
-    child: Material(
-      color: getBtnColor(value),
-      clipBehavior: Clip.hardEdge,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(100),
-      ),
-      elevation: 8, // Adds a slight lift to the button
-      shadowColor: Colors.black54, // Shadow effect
-      child: InkWell(
-        splashColor: getBtnColor(value).withOpacity(0.2), // Subtle highlight effect
-        onTap: () => onBtnTap(value),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(100),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black38, // Shadow color
-                blurRadius: 8, // Soft edges
-                offset: Offset(2, 4), // Position of shadow
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              value,
-              style: GoogleFonts.roboto( // Using Google Fonts here
-                fontWeight: FontWeight.bold,
-                fontSize: 36,
-                color: textColor,
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-  // ##########
-  void onBtnTap(String value){
-    if(value==Btn.del){
+    if (value == Btn.del) {
       delete();
       return;
     }
@@ -134,179 +173,359 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       return;
     }
 
-    if (value == Btn.per){
+    if (value == Btn.calculate) {
+      calculate(finalize: true);
+      return;
+    }
+
+    if (value == Btn.per) {
       convertToPercentage();
       return;
     }
 
-    if (value == Btn.plusOrminus) {
-    toggleSign();
-    return;
-    }
-
-    if(value == Btn.calculate) {
-      calculate();
+    if (value == Btn.squareroot) {
+      handleSquareRoot(); // Call the updated handleSquareRoot method
       return;
     }
 
-    appendValue(value);
-  }
-
-  void calculate(){
-    if (number1.isEmpty) return;
-    if (operand.isEmpty) return;
-    if (number2.isEmpty) return;
-
-    double num1 = double.parse(number1);
-    double num2 = double.parse(number2);
-
-    var result = 0.0;
-    switch(operand) {
-      case Btn.add:
-        result = num1 + num2;
-        break;
-      case Btn.subtract:
-        result = num1 - num2;
-        break;
-      case Btn.multiply:
-        result = num1 * num2;
-        break;
-      case Btn.divide:
-        result = num1 / num2;
-        break;
-      default:
+    if (value == Btn.plusOrminus) {
+      toggleSign(); // Call toggleSign method directly
+      return;
     }
 
-    setState(() {
-      number1 = "$result";
+    // Handle dot logic
+    if (value == Btn.dot) {
+      setState(() {
+        final lastNumber = equation.split(RegExp(r'[+\-×÷]')).last;
+        if (!lastNumber.contains('.')) {
+          equation += equation.isEmpty ? "0." : ".";
+        }
+      });
+      calculate(finalize: false);
+      return;
+    }
 
-      if(number1.endsWith(".0")){
-        number1 = number1.substring(0, number1.length - 2);
+    // Handle operator logic
+    if (RegExp(r'[+\-×÷]').hasMatch(value)) {
+      setState(() {
+        if (equation.isEmpty) {
+          equation = "0$value"; // Starting with 0 if empty
+        } else if (RegExp(r'[+\-×÷]$').hasMatch(equation)) {
+          equation = equation.substring(0, equation.length - 1) +
+              value; // Replace last operator
+        } else {
+          if (lastActionWasCalculation) {
+            // If last action was a calculation, append the operator to the result
+            equation = "$output$value";
+          } else {
+            equation += value;
+          }
+        }
+      });
+      calculate(finalize: false);
+      return;
+    }
+
+    // Append number or operator to the equation
+    setState(() {
+      equation += value;
+    });
+
+    // Dynamically calculate result
+    calculate(finalize: false);
+  }
+
+  void calculate({bool finalize = false}) {
+    try {
+      // Handle trailing operators (ignore last operator if present)
+      String expression = equation;
+      if (RegExp(r'[+\-×÷%]$').hasMatch(expression)) {
+        expression = expression.substring(0, expression.length - 1);
       }
 
-      operand = "";
-      number2 = "";
+      // Replace custom operators with standard ones for evaluation
+      expression = expression.replaceAll(Btn.multiply, '*');
+      expression = expression.replaceAll(Btn.divide, '/');
+      expression = expression.replaceAll('√', 'sqrt'); // Handle square root
+
+      // Add explicit multiplication for adjacent parentheses or number-parentheses
+      expression = expression.replaceAllMapped(RegExp(r'(\d)(\()'),
+          (match) => '${match[1]}*${match[2]}'); // Number before '('
+      expression = expression.replaceAllMapped(RegExp(r'\)(\d)'),
+          (match) => '${match[1]}*${match[2]}'); // ')' before number
+      expression = expression.replaceAllMapped(
+          RegExp(r'\)\('), (match) => ')*('); // ')' before '('
+
+      // Check for division by zero
+      if (expression.contains('/0')) {
+        setState(() {
+          output = "Can't divide by zero"; // Custom error message
+        });
+        return;
+      }
+
+      // Check for mismatched brackets
+      if (_countOccurrences(expression, '(') !=
+          _countOccurrences(expression, ')')) {
+        setState(() {
+          output = "Error"; // Mismatched brackets
+        });
+        return;
+      }
+
+      // Handle square root cases explicitly
+      if (finalize && RegExp(r'sqrt\(([^()]+)\)').hasMatch(expression)) {
+        final matches = RegExp(r'sqrt\(([^()]+)\)').allMatches(expression);
+
+        for (var match in matches) {
+          String innerExpression = match.group(1)!;
+          double? value = double.tryParse(innerExpression);
+
+          if (value == null || value < 0) {
+            setState(() {
+              output = "Invalid Input"; // Handle invalid or negative inputs
+            });
+            return;
+          }
+
+          // Replace square root with its calculated value
+          double sqrtValue = sqrt(value);
+          expression = expression.replaceFirst(
+            match.group(0)!,
+            sqrtValue % 1 == 0
+                ? sqrtValue.toInt().toString()
+                : sqrtValue
+                    .toStringAsFixed(10)
+                    .replaceFirst(RegExp(r'0+$'), ' ')
+                    .replaceFirst(RegExp(r'\.$'), ''),
+          );
+        }
+      }
+
+      // Parse and evaluate the final expression
+      final parser = Parser();
+      final exp = parser.parse(expression);
+      final result = exp.evaluate(EvaluationType.REAL, ContextModel());
+
+      setState(() {
+        if (result % 1 == 0) {
+          output = result.toInt().toString(); // Display as an integer
+        } else {
+          output = result
+              .toStringAsFixed(10)
+              .replaceFirst(RegExp(r'0+$'), ' ')
+              .replaceFirst(RegExp(r'\.$'), '');
+        }
+
+        if (finalize) {
+          lastActionWasCalculation = true; // Mark the action as a calculation
+          if (history.isNotEmpty && history[0].endsWith(" = $output")) {
+            return;
+          }
+          history.insert(0, "$equation = $output");
+          equation = output;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        output = "Error"; // Handle invalid expressions
+      });
+    }
+  }
+
+  void delete() {
+    setState(() {
+      if (equation.isNotEmpty) {
+        equation = equation.substring(0, equation.length - 1);
+      }
+      if (equation.isEmpty) {
+        output = "0"; // Reset output if equation is empty
+      } else {
+        calculate(finalize: false);
+      }
     });
   }
 
-  void delete(){
-    if(number2.isNotEmpty){
-      number2=number2.substring(0, number2.length - 1);
-    }else if (operand.isNotEmpty){
-      operand ="";
-    }else if(number1.isNotEmpty){
-      number1 = number1.substring(0, number1.length - 1);
-    }
-
-
-    setState(() {});
-  }
-
-  void clearAll(){
+  void clearAll() {
     setState(() {
-      number1 = "";
-      operand = "";
-      number2 = "";
-     
-    });
-  }
-
-  void convertToPercentage(){
-
-    if(number1.isNotEmpty&&operand.isNotEmpty&&number2.isNotEmpty){
-
-    }
-
-    if(operand.isNotEmpty){
-      return;
-    }
-
-    final number = double.parse(number1);
-    setState(() {
-      number1 = "${(number/100)}";
-      operand = "";
-      number2 = "";
+      equation = "";
+      output = "0";
     });
   }
 
   void toggleSign() {
-    // If operand is empty, toggle sign for number1
-    if (operand.isEmpty) {
-      setState(() {
-        if (number1.isEmpty) {
-          // Initially add a "-" to an empty number
-          number1 = "-";
-        } else if (number1 == "-") {
-          // If number1 is only "-", remove it
-          number1 = "";
-        } else if (number1.startsWith("-")) {
-          // If number1 starts with "-", remove it
-          number1 = number1.substring(1);
+    setState(() {
+      if (equation.isEmpty) {
+        equation = "-"; // If the equation is empty, start with a negative sign
+      } else {
+        // Check if the last character is an operator
+        if (RegExp(r'[+\-×÷]$').hasMatch(equation)) {
+          equation += "(-"; // Append "(-" after an operator
         } else {
-          // Otherwise, add a "-" at the start
-          number1 = "-$number1";
-        }
-      });
-      return;
-    }
+          // Split the equation by operators
+          final parts = equation.split(RegExp(r'([+\-×÷])'));
+          final lastPart = parts.last;
 
-    // If operand exists, toggle sign for number2
-    if (number2.isEmpty) {
-      setState(() {
-        if (number2.isEmpty) {
-          // Initially add a "-" to an empty number
-          number2 = "-";
-        } else if (number2 == "-") {
-          // If number2 is only "-", remove it
-          number2 = "";
-        } else if (number2.startsWith("-")) {
-          // If number2 starts with "-", remove it
-          number2 = number2.substring(1);
-        } else {
-          // Otherwise, add a "-" at the start
-          number2 = "-$number2";
+          if (lastPart.startsWith("-")) {
+            // If the last number is negative, remove the "-" sign
+            equation =
+                equation.substring(0, equation.length - lastPart.length) +
+                    lastPart.substring(1);
+          } else {
+            // If the last number is positive, add the "-" sign
+            equation =
+                equation.substring(0, equation.length - lastPart.length) +
+                    "-$lastPart";
+          }
         }
+      }
+      calculate(finalize: false); // Recalculate dynamically
+    });
+  }
+
+
+  void convertToPercentage() {
+    try {
+      final parser = Parser();
+      final exp = parser.parse(equation);
+      final result = exp.evaluate(EvaluationType.REAL, ContextModel()) / 100;
+
+      setState(() {
+        output = result.toStringAsFixed(2).replaceFirst(RegExp(r'\.00$'), '');
+        equation = output;
+      });
+    } catch (e) {
+      setState(() {
+        output = "Error";
       });
     }
   }
 
-  void appendValue(String value){
+  void handleSquareRoot() {
+    setState(() {
+      // If the equation is empty, start with "√("
+      if (equation.isEmpty) {
+        equation = "√(";
+        return;
+      }
 
-    if (value != Btn.dot && int.tryParse(value) == null) {
-      if (operand.isNotEmpty && number2.isNotEmpty) {
-        // calculate equation before assigning new number
+      // Check if the last character is an operator
+      if (RegExp(r'[+\-×÷]$').hasMatch(equation)) {
+        equation += "√("; // Append "√(" after the operator
+        return;
       }
-      operand = value;
-    } else if (number1.isEmpty || operand.isEmpty) {
-      if (value == Btn.dot && number1.contains(Btn.dot)) return;
-      if (value == Btn.dot && (number1.isEmpty || number1 == Btn.n0)) {
-        value = "0.";
-      }
-      number1 += value;
-    } else if (number2.isEmpty || operand.isNotEmpty) {
-      if (value == Btn.dot && number2.contains(Btn.dot)) return;
-      if (value == Btn.dot && (number2.isEmpty || number2 == Btn.n0)) {
-        value = "0.";
-      }
-      number2 += value;
-    }
 
-    setState(() {});
+      // Get the last segment of the equation
+      final parts = equation.split(RegExp(r'([+\-×÷])'));
+      final lastPart = parts.last;
+
+      // If the last part is a number, calculate the square root
+      double? number = double.tryParse(lastPart);
+
+      if (number != null) {
+        if (number < 0) {
+          // Square root of a negative number is invalid in real numbers
+          output = "Invalid Input";
+          return;
+        }
+
+        double sqrtValue = sqrt(number);
+        String sqrtResult = sqrtValue % 1 == 0
+            ? sqrtValue.toInt().toString() // Remove decimal for whole numbers
+            : sqrtValue
+                .toStringAsFixed(10)
+                .replaceFirst(RegExp(r'0+$'), '')
+                .replaceFirst(RegExp(r'\.$'), '');
+
+        // Replace the last number with its square root
+        equation = equation.substring(0, equation.length - lastPart.length) +
+            sqrtResult;
+      } else {
+        // If the last part is not a number, append "√("
+        equation += "√(";
+      }
+
+      // Recalculate dynamically
+      calculate(finalize: false);
+    });
   }
 
- // ###########
-  Color getBtnColor(value) {
-    return [Btn.del, Btn.clr].contains(value)
-        ? Colors.grey.shade100 // Dark gray for "DEL" and "CLR"
-        : [ Btn.per,
+
+
+  Widget buildButton(String value) {
+    final textColor = [
+      Btn.clr,
+      Btn.del,
+      Btn.per,
+      Btn.multiply,
+      Btn.add,
+      Btn.subtract,
+      Btn.divide,
+      Btn.calculate,
+      Btn.squareroot,
+      Btn.openbracket,
+      Btn.closebracket,
+      Btn.plusOrminus
+    ].contains(value)
+        ? Colors.black
+        : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: Material(
+        color: getBtnColor(value),
+        clipBehavior: Clip.hardEdge,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(100),
+        ),
+        elevation: 8,
+        shadowColor: Colors.black54,
+        child: InkWell(
+          splashColor: getBtnColor(value).withOpacity(0.2),
+          onTap: () => onBtnTap(value),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(100),
+            ),
+            child: Center(
+              child: Text(
+                value,
+                style: GoogleFonts.roboto(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 36,
+                  color: textColor,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color getBtnColor(String value) {
+    return [
+      Btn.del,
+      Btn.clr,
+    ].contains(value)
+        ? Colors.white
+        : [
+            Btn.per,
             Btn.multiply,
+            Btn.divide,
             Btn.add,
             Btn.subtract,
-            Btn.divide,
-            Btn.calculate,].contains(value)
-        ? Colors.orange.shade400
-        : [Btn.plusOrminus, Btn.dot].contains(value)
-        ? const Color.fromARGB(255, 70, 76, 116)
-        : const Color.fromARGB(255, 68, 71, 90); // Button background color
+            Btn.calculate,
+            Btn.squareroot,
+            Btn.openbracket,
+            Btn.closebracket,
+            Btn.plusOrminus
+          ].contains(value)
+            ? Colors.orange
+            : const Color.fromARGB(255, 68, 71, 90);
+  }
+  
+  int _countOccurrences(String input, String char) {
+    return input.split(char).length - 1;
   }
 }
