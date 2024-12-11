@@ -42,7 +42,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                         children: [
                           // Clear History Icon
                           IconButton(
-                            icon: Icon(Icons.delete_forever),
+                            icon: const Icon(Icons.delete_forever),
                             onPressed: () {
                               setState(() {
                                 history.clear(); // Clear history
@@ -374,8 +374,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           } else {
             // If the last number is positive, add the "-" sign
             equation =
-                equation.substring(0, equation.length - lastPart.length) +
-                    "-$lastPart";
+                "${equation.substring(0, equation.length - lastPart.length)}-$lastPart";
           }
         }
       }
