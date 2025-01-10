@@ -15,7 +15,7 @@ class CalculatorScreen extends StatefulWidget {
 class _CalculatorScreenState extends State<CalculatorScreen> {
   String equation = ""; // The input string
   String output = "0"; // The calculated result
-  List<String> history = []; // History list
+  List<String> history = []; // History 
   bool lastActionWasCalculation = false; // Track if the last action was a calculation
 
 
